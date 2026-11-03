@@ -26,7 +26,10 @@ export function computeGroupStandings(
   events: Event[],
   players: Player[]
 ): StandingRow[] {
+  // Filter active teams in this group
   const gTeams = teams.filter(t => t.group_name === group);
+  
+  // Get finished matches for this group
   const gMatches = matches.filter(
     m => m.stage === 'group' && m.group_name === group && m.status === 'finished'
   );
@@ -54,10 +57,16 @@ export function computeGroupStandings(
 
   for (const m of gMatches) {
     if (m.home_score == null || m.away_score == null) continue;
-    const h = base.get(m.home_team_id)!, a = base.get(m.away_team_id)!;
+    
+    // SAFETY CHECK: Ensure both teams still exist in the active list
+    const h = base.get(m.home_team_id);
+    const a = base.get(m.away_team_id);
+    if (!h || !a) continue; // Skip match if a team was deleted
+
     h.played++; a.played++;
     h.gf += m.home_score; h.ga += m.away_score;
     a.gf += m.away_score; a.ga += m.home_score;
+    
     if (m.home_score > m.away_score) { h.won++; a.lost++; h.points += 3; }
     else if (m.home_score < m.away_score) { a.won++; h.lost++; a.points += 3; }
     else { h.drawn++; a.drawn++; h.points++; a.points++; }
@@ -79,7 +88,10 @@ export function computeGroupStandings(
       const homeScore: number = m.home_score;
       const awayScore: number = m.away_score;
       
-      const h = mini.get(m.home_team_id)!, a = mini.get(m.away_team_id)!;
+      const h = mini.get(m.home_team_id);
+      const a = mini.get(m.away_team_id);
+      if (!h || !a) continue;
+      
       h.gf += homeScore; h.gd += homeScore - awayScore;
       a.gf += awayScore; a.gd += awayScore - homeScore;
       
@@ -99,14 +111,12 @@ export function computeGroupStandings(
     });
   }
 
-  // Group by points
   const pointsMap = new Map<number, StandingRow[]>();
   for (const r of rows) {
     if (!pointsMap.has(r.points)) pointsMap.set(r.points, []);
     pointsMap.get(r.points)!.push(r);
   }
 
-  // Sort points descending and apply head-to-head
   const ordered: StandingRow[] = [];
   const sortedPoints = Array.from(pointsMap.keys()).sort((a, b) => b - a);
   
