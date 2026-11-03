@@ -219,10 +219,14 @@ export async function generateKnockouts() {
   const allPlayers = players || []
   const allEvents = events || []
 
-  // 2. Ensure Group Stage is actually finished
+  // 2. Check if all group matches are finished
   const groupMatches = allMatches.filter(m => m.stage === 'group')
-  const allGroupsFinished = groupMatches.length > 0 && groupMatches.every(m => m.status === 'finished')
   
+  if (groupMatches.length === 0) {
+    throw new Error('No group fixtures found. Generate fixtures first!')
+  }
+
+  const allGroupsFinished = groupMatches.every(m => m.status === 'finished')
   if (!allGroupsFinished) {
     throw new Error('All group matches must be finished before generating knockouts!')
   }
@@ -241,6 +245,7 @@ export async function generateKnockouts() {
     throw new Error('Not enough teams in groups to generate knockouts')
   }
 
+  // Safe to access now
   const a1 = standingsA[0].team_id
   const a2 = standingsA[1].team_id
   const a3 = standingsA[2].team_id
