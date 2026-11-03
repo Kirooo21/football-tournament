@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { generateKnockouts } from '@/lib/actions/teams'
 
 export default function GenerateKnockoutsButton() {
@@ -10,8 +11,24 @@ export default function GenerateKnockoutsButton() {
   const handleGenerate = async () => {
     setLoading(true)
     setError('')
+    
     try {
+      // 1. Check the database directly from the browser first
+      const supabase = createClient()
+      const { data: matches } = await supabase.from('matches').select('status').eq('stage', 'group')
+      
+      if (!matches || matches.length === 0) {
+        throw new Error('No group fixtures found. Generate fixtures first!')
+      }
+      
+      const allFinished = matches.every(m => m.status === 'finished')
+      if (!allFinished) {
+        throw new Error('All group matches must be finished before generating knockouts!')
+      }
+
+      // 2. If they are finished, call the server action
       await generateKnockouts()
+      
     } catch (err: any) {
       setError(err.message || 'Something went wrong')
     } finally {
